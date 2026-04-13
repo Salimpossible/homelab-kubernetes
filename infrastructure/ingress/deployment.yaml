@@ -1,0 +1,72 @@
+# CONCEPT: Deployment — "The controller itself"
+#
+# This is just a regular nginx pod — but it's the official ingress-nginx controller image.
+# The controller process does two things simultaneously:
+#   1. Watches the Kubernetes API for Ingress changes (using the ServiceAccount from rbac.yaml)
+#   2. Dynamically rewrites /etc/nginx/nginx.conf and reloads nginx when things change
+#
+# Key args to understand:
+#   --ingress-class=nginx          → only process Ingress objects with ingressClassName: nginx
+#   --configmap=...                → load global config from our ConfigMap
+#   --controller-class=...         → must match the IngressClass spec.controller value
+#
+# POD_NAME and POD_NAMESPACE are injected so the controller can identify itself
+# for leader election (ensures only one replica is active).
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-ingress-controller
+  namespace: ingress-system
+  labels:
+    app: nginx-ingress
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-ingress
+  template:
+    metadata:
+      labels:
+        app: nginx-ingress
+    spec:
+      serviceAccountName: nginx-ingress  # Use the ServiceAccount from rbac.yaml
+      containers:
+        - name: controller
+          image: registry.k8s.io/ingress-nginx/controller:v1.9.6
+          args:
+            - /nginx-ingress-controller
+            - --ingress-class=nginx
+            - --controller-class=k8s.io/ingress-nginx  # Must match IngressClass spec.controller
+            - --configmap=$(POD_NAMESPACE)/nginx-ingress-config
+            - --watch-ingress-without-class=false
+          env:
+            # Injected so the controller knows its own identity (used for leader election)
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          ports:
+            - name: http
+              containerPort: 80
+            - name: https
+              containerPort: 443
+          # The controller needs these to function correctly
+          securityContext:
+            allowPrivilegeEscalation: true
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_BIND_SERVICE  # Allows binding to ports < 1024 (80, 443)
+            runAsUser: 101
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 10254
+            initialDelaySeconds: 10
+            periodSeconds: 5

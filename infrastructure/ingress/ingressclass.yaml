@@ -1,0 +1,23 @@
+# CONCEPT: IngressClass — "Which controller owns which Ingress objects?"
+#
+# A cluster can have multiple ingress controllers (nginx, traefik, HAProxy...).
+# IngressClass is how an Ingress object says "I want NGINX to handle me":
+#
+#   spec:
+#     ingressClassName: nginx   <-- matches metadata.name below
+#
+# The controller only processes Ingress objects whose ingressClassName matches.
+# It ignores everything else. This prevents two controllers from fighting over
+# the same Ingress rules.
+#
+# spec.controller must match the --controller-class arg in the Deployment.
+
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: nginx
+  annotations:
+    # Makes this the default class — Ingress objects with no ingressClassName get this one
+    ingressclass.kubernetes.io/is-default-class: "true"
+spec:
+  controller: k8s.io/ingress-nginx

@@ -1,0 +1,29 @@
+# CONCEPT: ConfigMap — "How do you tune nginx?"
+#
+# The controller reads this ConfigMap at startup and translates the key-value pairs
+# into directives inside nginx.conf.
+#
+# For example, setting proxy-connect-timeout: "10" results in:
+#   proxy_connect_timeout 10s;
+# being injected into every upstream block nginx generates.
+#
+# This is where you control global nginx behaviour without writing raw nginx.conf.
+# Per-route overrides go on individual Ingress objects as annotations.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  # Name must match the --configmap arg in the Deployment
+  name: nginx-ingress-config
+  namespace: ingress-system
+data:
+  # How long nginx waits to establish a connection to your backend pod
+  proxy-connect-timeout: "10"
+  # How long nginx waits for your backend to send a response
+  proxy-read-timeout: "120"
+  # How long nginx waits to send a request to your backend
+  proxy-send-timeout: "120"
+  # Forward the real client IP to your app (instead of the nginx pod IP)
+  use-forwarded-headers: "true"
+  # Add X-Real-IP, X-Forwarded-For headers to proxied requests
+  compute-full-forwarded-for: "true"

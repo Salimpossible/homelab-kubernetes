@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: downloads
+  namespace: media
+  annotations:
+    description: Node-local downloads workspace shared by media automation workloads on a dedicated node
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 350Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: media
+  namespace: media
+  annotations:
+    description: Shared media library mounted by Plex, Radarr, and Sonarr
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: smb-media
+  resources:
+    requests:
+      storage: 3Ti

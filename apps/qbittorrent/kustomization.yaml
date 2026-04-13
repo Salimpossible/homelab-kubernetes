@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: media
+
+resources:
+  - rbac.yaml
+  - configmap.yaml
+  - pvc.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+
+commonLabels:
+  app: vpn-torrent
+  component: download-manager
+
+commonAnnotations:
+  description: "qBittorrent with NordVPN (gluetun) - VPN gateway for secure torrent downloads"

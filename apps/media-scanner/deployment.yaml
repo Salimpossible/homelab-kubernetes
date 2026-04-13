@@ -1,0 +1,131 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: media-scanner
+  namespace: media
+  labels:
+    app: media-scanner
+    component: scan-promote
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: media-scanner
+      component: scan-promote
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: media-scanner
+        component: scan-promote
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: homelab.io/downloads-local
+                operator: In
+                values:
+                - "true"
+      containers:
+      - name: scanner
+        image: clamav/clamav:1.4
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -c
+        - /scripts/scan-and-promote.sh
+        env:
+        - name: TZ
+          value: Europe/Paris
+        - name: DOWNLOADS_DIR
+          value: /downloads
+        - name: MEDIA_DIR
+          value: /media
+        - name: STATE_DIR
+          value: /downloads/.scan-state
+        - name: QUARANTINE_DIR
+          value: /downloads/quarantine
+        - name: CLAMD_HOST
+          value: clamav
+        - name: CLAMD_PORT
+          value: "3310"
+        - name: POLL_INTERVAL_SECONDS
+          value: "20"
+        - name: STABILITY_WAIT_SECONDS
+          value: "10"
+        volumeMounts:
+        - name: scanner-script
+          mountPath: /scripts
+          readOnly: true
+        - name: downloads
+          mountPath: /downloads
+        - name: media
+          mountPath: /media
+        - name: tmp
+          mountPath: /tmp
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+            ephemeral-storage: 256Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+            ephemeral-storage: 1Gi
+        startupProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - test -f /tmp/worker-ready
+          periodSeconds: 5
+          failureThreshold: 24
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - test -f /tmp/worker-ready
+          periodSeconds: 10
+          failureThreshold: 3
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - test -f /tmp/heartbeat && [ "$(($(date +%s) - $(date -r /tmp/heartbeat +%s)))" -lt 120 ]
+          periodSeconds: 30
+          failureThreshold: 3
+      volumes:
+      - name: scanner-script
+        configMap:
+          name: media-scanner-script
+          defaultMode: 0555
+      - name: downloads
+        persistentVolumeClaim:
+          claimName: downloads
+      - name: media
+        persistentVolumeClaim:
+          claimName: media
+      - name: tmp
+        emptyDir: {}

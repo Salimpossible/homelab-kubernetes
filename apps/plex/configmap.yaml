@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: plex-config
+  namespace: media
+data:
+  # Add plex configuration here
+  extra-config: |
+    log-level=info
+    enable-dlna=true

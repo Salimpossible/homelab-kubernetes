@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clamav-config
+  namespace: media
+data:
+  freshclam.conf: |
+    LogFile /var/log/clamav/freshclam.log
+    LogFileMaxSize 0
+    LogSyslog false
+    LogRotate true
+    LogTime true
+    Foreground false

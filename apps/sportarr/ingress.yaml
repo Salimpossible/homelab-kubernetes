@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sportarr
+  namespace: media
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - sportarr.home.arpa
+      secretName: homelab-wildcard-tls
+  rules:
+  - host: sportarr.home.arpa
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: sportarr
+            port:
+              number: 1867

@@ -1,0 +1,141 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vpn-torrent
+  namespace: media
+  labels:
+    app: vpn-torrent
+    component: download-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vpn-torrent
+      component: download-manager
+  template:
+    metadata:
+      labels:
+        app: vpn-torrent
+        component: download-manager
+    spec:
+      serviceAccountName: qbittorrent-job-trigger
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: homelab.io/downloads-local
+                operator: In
+                values:
+                - "true"
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: None
+      dnsConfig:
+        nameservers:
+        - 8.8.8.8
+        - 8.8.4.4
+      
+      containers:
+      # VPN Gateway Container
+      - name: gluetun
+        image: qmcgaw/gluetun:latest
+        imagePullPolicy: Always
+        securityContext:
+          capabilities:
+            add:
+              - NET_ADMIN
+          privileged: true
+        env:
+        - name: VPN_TYPE
+          value: wireguard
+        - name: WIREGUARD_PRIVATE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: media-stack-env
+              key: WIREGUARD_PRIVATE_KEY
+        - name: OPENVPN_USER
+          valueFrom:
+            secretKeyRef:
+              name: media-stack-env
+              key: OPENVPN_USER
+        - name: OPENVPN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: media-stack-env
+              key: OPENVPN_PASSWORD
+        - name: VPN_SERVICE_PROVIDER
+          valueFrom:
+            secretKeyRef:
+              name: media-stack-env
+              key: VPNSP
+        - name: SERVER_COUNTRIES
+          value: Switzerland
+        - name: HEALTH_CHECK_ENABLED
+          value: "no"
+        - name: FIREWALL
+          value: "on"
+        - name: FIREWALL_OUTBOUND_SUBNETS
+          value: "192.168.0.0/16"
+        - name: FIREWALL_VPN_INPUT_PORTS
+          value: "6881"
+        volumeMounts:
+        - name: gluetun-config
+          mountPath: /gluetun
+      
+      # qBittorrent Container
+      - name: qbittorrent
+        image: linuxserver/qbittorrent:latest
+        env:
+        - name: PUID
+          value: "1000"
+        - name: PGID
+          value: "1000"
+        - name: TZ
+          value: Europe/Paris
+        - name: WEBUI_PORT
+          value: "8080"
+        - name: TORRENTING_PORT
+          value: "6881"
+        ports:
+        - containerPort: 8080
+          name: webui
+        volumeMounts:
+        - name: qbittorrent-config
+          mountPath: /config
+        - name: downloads
+          mountPath: /downloads
+        - name: media
+          mountPath: /media
+        - name: qbittorrent-hooks
+          mountPath: /hooks
+          readOnly: true
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 2000m
+            memory: 4Gi
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          failureThreshold: 5
+      
+      volumes:
+      - name: gluetun-config
+        persistentVolumeClaim:
+          claimName: gluetun-config
+      - name: qbittorrent-hooks
+        configMap:
+          name: qbittorrent-config
+      - name: qbittorrent-config
+        persistentVolumeClaim:
+          claimName: qbittorrent-config
+      - name: downloads
+        persistentVolumeClaim:
+          claimName: downloads
+      - name: media
+        persistentVolumeClaim:
+          claimName: media

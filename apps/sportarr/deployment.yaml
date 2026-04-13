@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sportarr
+  namespace: media
+  labels:
+    app: sportarr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sportarr
+  template:
+    metadata:
+      labels:
+        app: sportarr
+    spec:
+      securityContext:
+        fsGroup: 100
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: homelab.io/downloads-local
+                operator: In
+                values:
+                - "true"
+      containers:
+      - name: sportarr
+        image: sportarr/sportarr:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: PUID
+          value: "99"
+        - name: PGID
+          value: "100"
+        - name: UMASK
+          value: "022"
+        - name: TZ
+          value: Europe/Paris
+        ports:
+        - containerPort: 1867
+          name: webui
+        volumeMounts:
+        - name: sportarr-config
+          mountPath: /config
+        - name: media
+          mountPath: /data
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 1867
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 1867
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+      volumes:
+      - name: sportarr-config
+        persistentVolumeClaim:
+          claimName: sportarr-config
+      - name: media
+        persistentVolumeClaim:
+          claimName: media

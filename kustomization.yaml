@@ -1,0 +1,60 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+# Infrastructure
+- infrastructure/namespaces/namespaces.yaml
+- infrastructure/storage/storageclass.yaml
+- infrastructure/storage/shared-pvc.yaml
+- infrastructure/cert-manager
+
+# Secrets
+- infrastructure/storage/secret-env.yaml
+
+# Applications
+- apps/plex/deployment.yaml
+- apps/plex/service.yaml
+- apps/plex/pvc.yaml
+- apps/plex/configmap.yaml
+- apps/plex/ingress.yaml
+
+- apps/radarr/deployment.yaml
+- apps/radarr/service.yaml
+- apps/radarr/pvc.yaml
+- apps/radarr/secret.yaml
+- apps/radarr/ingress.yaml
+
+- apps/sonarr/deployment.yaml
+- apps/sonarr/service.yaml
+- apps/sonarr/pvc.yaml
+- apps/sonarr/secret.yaml
+- apps/sonarr/ingress.yaml
+
+- apps/qbittorrent/deployment.yaml
+- apps/qbittorrent/service.yaml
+- apps/qbittorrent/pvc.yaml
+- apps/qbittorrent/configmap.yaml
+- apps/qbittorrent/rbac.yaml
+- apps/qbittorrent/ingress.yaml
+
+- apps/clamav/pvc.yaml
+- apps/clamav/configmap.yaml
+
+- apps/prowlarr/deployment.yaml
+- apps/prowlarr/service.yaml
+- apps/prowlarr/pvc.yaml
+- apps/prowlarr/ingress.yaml
+
+- apps/sportarr/deployment.yaml
+- apps/sportarr/service.yaml
+- apps/sportarr/pvc-config.yaml
+- apps/sportarr/ingress.yaml
+
+labels:
+- pairs:
+    managed-by: kustomize
+    environment: homelab
+  includeSelectors: false
+
+commonAnnotations:
+  version: "1.0"

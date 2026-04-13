@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: media-scanner-script
+  namespace: media
+data:
+  scan-and-promote.sh: |
+    #!/bin/sh
+    set -eu
+
+    DOWNLOADS_DIR="${DOWNLOADS_DIR:-/downloads}"
+    MEDIA_DIR="${MEDIA_DIR:-/media}"
+    STATE_DIR="${STATE_DIR:-/downloads/.scan-state}"
+    QUARANTINE_DIR="${QUARANTINE_DIR:-/downloads/quarantine}"
+    CLAMD_HOST="${CLAMD_HOST:-clamav}"
+    CLAMD_PORT="${CLAMD_PORT:-3310}"
+    POLL_INTERVAL_SECONDS="${POLL_INTERVAL_SECONDS:-20}"
+    STABILITY_WAIT_SECONDS="${STABILITY_WAIT_SECONDS:-10}"
+    MEDIA_EXTENSIONS="${MEDIA_EXTENSIONS:-mkv|mp4|avi|mov|wmv|flac|mp3|m4a|srt|ass|ssa|sub}"
+
+    mkdir -p "${STATE_DIR}" "${QUARANTINE_DIR}" /tmp
+    touch /tmp/worker-ready
+
+    is_candidate_file() {
+      file="$1"
+      rel="${file#${DOWNLOADS_DIR}/}"
+
+      case "${rel}" in
+        incomplete/*|quarantine/*|.scan-state/*)
+          return 1
+          ;;
+      esac
+
+      case "${file}" in
+        *.part|*.!qB)
+          return 1
+          ;;
+      esac
+
+      ext="${file##*.}"
+      ext_lc="$(printf '%s' "${ext}" | tr '[:upper:]' '[:lower:]')"
+      printf '%s\n' "${ext_lc}" | grep -Eq "^(${MEDIA_EXTENSIONS})$"
+    }
+
+    is_stable_file() {
+      file="$1"
+      size_before="$(stat -c '%s' "${file}" 2>/dev/null || echo 0)"
+      sleep "${STABILITY_WAIT_SECONDS}"
+      size_after="$(stat -c '%s' "${file}" 2>/dev/null || echo 0)"
+      [ "${size_before}" -gt 0 ] && [ "${size_before}" -eq "${size_after}" ]
+    }
+
+    check_clamd() {
+      # If clamd is down, keep looping instead of failing the pod.
+      clamdscan --host "${CLAMD_HOST}" --port "${CLAMD_PORT}" --no-summary /dev/null >/dev/null 2>&1 || true
+    }
+
+    while true; do
+      check_clamd
+
+      find "${DOWNLOADS_DIR}" -type f 2>/dev/null | while read -r file; do
+        if ! is_candidate_file "${file}"; then
+          continue
+        fi
+
+        rel="${file#${DOWNLOADS_DIR}/}"
+        marker="$(printf '%s' "${rel}" | sha256sum | awk '{print $1}')"
+
+        if [ -f "${STATE_DIR}/${marker}.clean" ] || [ -f "${STATE_DIR}/${marker}.infected" ]; then
+          continue
+        fi
+
+        if ! is_stable_file "${file}"; then
+          continue
+        fi
+
+        if clamdscan --host "${CLAMD_HOST}" --port "${CLAMD_PORT}" --no-summary "${file}"; then
+          target="${MEDIA_DIR}/${rel}"
+          mkdir -p "$(dirname "${target}")"
+
+          # Cross-PV copy then atomic rename on destination side to avoid partial files in Plex paths.
+          cp -f "${file}" "${target}.partial"
+          mv -f "${target}.partial" "${target}"
+          rm -f "${file}"
+
+          date -Iseconds > "${STATE_DIR}/${marker}.clean"
+          printf '%s clean -> promoted\n' "${rel}"
+        else
+          quarantine_target="${QUARANTINE_DIR}/${rel}"
+          mkdir -p "$(dirname "${quarantine_target}")"
+          mv -f "${file}" "${quarantine_target}"
+
+          date -Iseconds > "${STATE_DIR}/${marker}.infected"
+          printf '%s infected -> quarantined\n' "${rel}"
+        fi
+      done
+
+      date -Iseconds > /tmp/heartbeat
+      sleep "${POLL_INTERVAL_SECONDS}"
+    done

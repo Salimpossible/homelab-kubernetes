@@ -1,0 +1,29 @@
+# CONCEPT: Service — "How does external traffic reach the nginx pod?"
+#
+# The controller pod is running inside the cluster. External traffic (your browser)
+# can't reach it directly. The Service is the entry point.
+#
+# For clean URLs, expose nginx as a LoadBalancer service on ports 80/443.
+# k3s ServiceLB (svclb pods) publishes these ports on node IPs.
+#
+# Full path:
+#   Browser → NodeIP:80/443 → nginx pod → app Service → app pod
+#
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-ingress
+  namespace: ingress-system
+  labels:
+    app: nginx-ingress
+spec:
+  type: LoadBalancer
+  selector:
+    app: nginx-ingress  # Routes to pods with this label (matches the Deployment)
+  ports:
+    - name: http
+      port: 80           # ClusterIP port (internal cluster access)
+      targetPort: 80     # Container port on the nginx pod
+    - name: https
+      port: 443
+      targetPort: 443

@@ -1,0 +1,167 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: qbittorrent-config
+  namespace: media
+data:
+  qbit-on-complete.sh: |
+    #!/bin/sh
+    set -eu
+
+    FILE_PATH="${1:-}"
+    NAMESPACE="${NAMESPACE:-media}"
+    API_SERVER="https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT_HTTPS}"
+    TOKEN_FILE="/var/run/secrets/kubernetes.io/serviceaccount/token"
+    CA_FILE="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+
+    if [ -z "${FILE_PATH}" ]; then
+      echo "scan-hook: empty file path, skipping"
+      exit 0
+    fi
+
+    case "${FILE_PATH}" in
+      /downloads/*)
+        ;;
+      *)
+        echo "scan-hook: rejected path outside /downloads: ${FILE_PATH}"
+        exit 0
+        ;;
+    esac
+
+    if [ ! -f "${FILE_PATH}" ]; then
+      echo "scan-hook: file missing, skipping: ${FILE_PATH}"
+      exit 0
+    fi
+
+    TOKEN="$(cat "${TOKEN_FILE}")"
+    JOB_NAME="qscan-$(date +%s)-$$"
+
+    json_escape() {
+      printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+    }
+
+    FILE_PATH_JSON="$(json_escape "${FILE_PATH}")"
+
+    cat <<EOF >/tmp/job-payload.json
+    {
+      "apiVersion": "batch/v1",
+      "kind": "Job",
+      "metadata": {
+        "name": "${JOB_NAME}",
+        "namespace": "${NAMESPACE}",
+        "labels": {
+          "app": "media-scan-job",
+          "managed-by": "qbittorrent-hook"
+        }
+      },
+      "spec": {
+        "ttlSecondsAfterFinished": 3600,
+        "backoffLimit": 1,
+        "activeDeadlineSeconds": 1800,
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "media-scan-job"
+            }
+          },
+          "spec": {
+            "restartPolicy": "Never",
+            "automountServiceAccountToken": false,
+            "securityContext": {
+              "runAsNonRoot": true,
+              "runAsUser": 1000,
+              "runAsGroup": 1000,
+              "fsGroup": 1000,
+              "seccompProfile": {
+                "type": "RuntimeDefault"
+              }
+            },
+            "affinity": {
+              "nodeAffinity": {
+                "requiredDuringSchedulingIgnoredDuringExecution": {
+                  "nodeSelectorTerms": [
+                    {
+                      "matchExpressions": [
+                        {
+                          "key": "homelab.io/downloads-local",
+                          "operator": "In",
+                          "values": ["true"]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            "containers": [
+              {
+                "name": "scan-and-promote",
+                "image": "clamav/clamav:1.4",
+                "imagePullPolicy": "IfNotPresent",
+                "env": [
+                  { "name": "TARGET_FILE", "value": "${FILE_PATH_JSON}" },
+                  { "name": "DEST_ROOT", "value": "/media" },
+                  { "name": "QUARANTINE_ROOT", "value": "/downloads/quarantine" }
+                ],
+                "command": ["/bin/sh", "-ec"],
+                "args": [
+                  "case \"${TARGET_FILE}\" in /downloads/*) ;; *) echo invalid path; exit 1 ;; esac; if [ ! -f \"${TARGET_FILE}\" ]; then echo missing file; exit 0; fi; rel=\"${TARGET_FILE#/downloads/}\"; if clamscan --no-summary \"${TARGET_FILE}\"; then target=\"${DEST_ROOT}/${rel}\"; mkdir -p \"$(dirname \"${target}\")\"; cp -f \"${TARGET_FILE}\" \"${target}.partial\"; mv -f \"${target}.partial\" \"${target}\"; rm -f \"${TARGET_FILE}\"; echo CLEAN ${TARGET_FILE}; else quarantine=\"${QUARANTINE_ROOT}/${rel}\"; mkdir -p \"$(dirname \"${quarantine}\")\"; mv -f \"${TARGET_FILE}\" \"${quarantine}\"; echo INFECTED ${TARGET_FILE}; fi"
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "100m",
+                    "memory": "512Mi",
+                    "ephemeral-storage": "512Mi"
+                  },
+                  "limits": {
+                    "cpu": "2000m",
+                    "memory": "2Gi",
+                    "ephemeral-storage": "2Gi"
+                  }
+                },
+                "securityContext": {
+                  "allowPrivilegeEscalation": false,
+                  "readOnlyRootFilesystem": false,
+                  "capabilities": {
+                    "drop": ["ALL"]
+                  }
+                },
+                "volumeMounts": [
+                  { "name": "downloads", "mountPath": "/downloads" },
+                  { "name": "media", "mountPath": "/media" }
+                ]
+              }
+            ],
+            "volumes": [
+              {
+                "name": "downloads",
+                "persistentVolumeClaim": {
+                  "claimName": "downloads"
+                }
+              },
+              {
+                "name": "media",
+                "persistentVolumeClaim": {
+                  "claimName": "media"
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+    EOF
+
+    if command -v curl >/dev/null 2>&1; then
+      code="$(curl -sS -o /tmp/job-response.json -w '%{http_code}' --cacert "${CA_FILE}" -H "Authorization: Bearer ${TOKEN}" -H 'Content-Type: application/json' -X POST "${API_SERVER}/apis/batch/v1/namespaces/${NAMESPACE}/jobs" --data-binary @/tmp/job-payload.json || true)"
+      if [ "${code}" = "201" ]; then
+        echo "scan-hook: created job ${JOB_NAME} for ${FILE_PATH}"
+        exit 0
+      fi
+      echo "scan-hook: api returned status ${code}"
+      cat /tmp/job-response.json || true
+      exit 1
+    fi
+
+    echo "scan-hook: curl is not available in qbittorrent container"
+    exit 1

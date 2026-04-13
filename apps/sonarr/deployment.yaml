@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sonarr
+  namespace: media
+  labels:
+    app: sonarr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sonarr
+  template:
+    metadata:
+      labels:
+        app: sonarr
+    spec:
+      securityContext:
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: homelab.io/downloads-local
+                operator: In
+                values:
+                - "true"
+      initContainers:
+      - name: init-config
+        image: linuxserver/sonarr:latest
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -c
+        - |
+          API_KEY="$(cat /bootstrap/apiKey)"
+          if [ ! -f /config/config.xml ]; then
+            mkdir -p /config
+            printf '%s\n' \
+              '<Config>' \
+              '<BindAddress>*</BindAddress>' \
+              '<Port>8989</Port>' \
+              '<SslPort>9898</SslPort>' \
+              '<EnableSsl>False</EnableSsl>' \
+              '<LaunchBrowser>True</LaunchBrowser>' \
+              "<ApiKey>${API_KEY}</ApiKey>" \
+              '<AuthenticationMethod>None</AuthenticationMethod>' \
+              '<AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>' \
+              '<Branch>main</Branch>' \
+              '<LogLevel>info</LogLevel>' \
+              '<SslCertPath></SslCertPath>' \
+              '<SslCertPassword></SslCertPassword>' \
+              '<UrlBase></UrlBase>' \
+              '<InstanceName>Sonarr</InstanceName>' \
+              '<UpdateMechanism>Docker</UpdateMechanism>' \
+              '</Config>' > /config/config.xml
+            echo "Config initialized from secret-backed bootstrap"
+          fi
+          sed -i 's|<AuthenticationRequired>.*</AuthenticationRequired>|<AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>|' /config/config.xml
+          sed -i 's|<AuthenticationMethod>.*</AuthenticationMethod>|<AuthenticationMethod>None</AuthenticationMethod>|' /config/config.xml
+        volumeMounts:
+        - name: sonarr-config
+          mountPath: /config
+        - name: sonarr-bootstrap-secret
+          mountPath: /bootstrap
+          readOnly: true
+
+      containers:
+      - name: sonarr
+        image: linuxserver/sonarr:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: PUID
+          value: "1000"
+        - name: PGID
+          value: "1000"
+        - name: TZ
+          value: Europe/Paris
+        ports:
+        - containerPort: 8989
+          name: webui
+        volumeMounts:
+        - name: sonarr-config
+          mountPath: /config
+        - name: downloads
+          mountPath: /downloads
+        - name: media
+          mountPath: /tv
+        securityContext:
+          allowPrivilegeEscalation: false
+        resources:
+          requests:
+            cpu: 150m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: 8989
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /ping
+            port: 8989
+          initialDelaySeconds: 30
+          periodSeconds: 10
+
+      volumes:
+      - name: sonarr-config
+        persistentVolumeClaim:
+          claimName: sonarr-config
+      - name: sonarr-bootstrap-secret
+        secret:
+          secretName: sonarr-bootstrap
+      - name: downloads
+        persistentVolumeClaim:
+          claimName: downloads
+      - name: media
+        persistentVolumeClaim:
+          claimName: media

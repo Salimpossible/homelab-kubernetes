@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sportarr
+  namespace: media
+  labels:
+    app: sportarr
+spec:
+  type: ClusterIP
+  selector:
+    app: sportarr
+  ports:
+  - name: webui
+    port: 1867
+    targetPort: 1867

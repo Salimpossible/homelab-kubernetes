@@ -1,0 +1,64 @@
+# CONCEPT: RBAC — "What is the controller allowed to do?"
+#
+# The nginx ingress controller is just a pod. But it needs to:
+#   - WATCH all Ingress objects across all namespaces (to build its routing table)
+#   - WATCH Services & Endpoints (to know where to proxy_pass traffic)
+#   - UPDATE Ingress/status (to write back the assigned IP address)
+#
+# Without this, the controller pod starts but is blind — it can't see any resources.
+# Kubernetes denies all API access by default. You must explicitly grant it.
+#
+# Flow: ServiceAccount → bound to ClusterRole → ClusterRole has the rules
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nginx-ingress
+  namespace: ingress-system
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nginx-ingress
+rules:
+  # Core resources the controller needs to watch
+  - apiGroups: [""]
+    resources: ["services", "endpoints", "secrets", "configmaps", "namespaces", "pods", "nodes"]
+    verbs: ["get", "list", "watch"]
+  # Allow creating Kubernetes Events (useful for debugging/controller status)
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  # Read Ingress rules + IngressClass
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses", "ingressclasses"]
+    verbs: ["get", "list", "watch"]
+  # Newer Kubernetes uses EndpointSlices for service backends
+  - apiGroups: ["discovery.k8s.io"]
+    resources: ["endpointslices"]
+    verbs: ["get", "list", "watch"]
+  # Write back the external IP to the Ingress status field
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses/status"]
+    verbs: ["update"]
+  # Needed for leader election (only one controller active at a time)
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: nginx-ingress
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: nginx-ingress
+subjects:
+  - kind: ServiceAccount
+    name: nginx-ingress
+    namespace: ingress-system

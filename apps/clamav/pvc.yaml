@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: clamav-config
+  namespace: media
+  annotations:
+    description: "Virus signature database - updated daily via freshclam"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path  # Local for fast scans
+  resources:
+    requests:
+      storage: 25Gi  # Signatures + quarantine files

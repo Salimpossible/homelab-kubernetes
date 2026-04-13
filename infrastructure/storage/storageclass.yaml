@@ -1,0 +1,27 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-path
+provisioner: rancher.io/local-path
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: smb-media
+provisioner: smb.csi.k8s.io
+parameters:
+  source: "//192.168.1.21/Public"
+  csi.storage.k8s.io/provisioner-secret-name: smbcreds
+  csi.storage.k8s.io/provisioner-secret-namespace: media
+  csi.storage.k8s.io/node-stage-secret-name: smbcreds
+  csi.storage.k8s.io/node-stage-secret-namespace: media
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+volumeBindingMode: Immediate
+mountOptions:
+  - dir_mode=0777
+  - file_mode=0777
+  - uid=1000
+  - gid=1000
+  - vers=3.0

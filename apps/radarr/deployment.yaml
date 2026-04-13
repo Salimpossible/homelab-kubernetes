@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: radarr
+  namespace: media
+  labels:
+    app: radarr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: radarr
+  template:
+    metadata:
+      labels:
+        app: radarr
+    spec:
+      securityContext:
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: homelab.io/downloads-local
+                operator: In
+                values:
+                - "true"
+      initContainers:
+      - name: init-config
+        image: linuxserver/radarr:latest
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -c
+        - |
+          API_KEY="$(cat /bootstrap/apiKey)"
+          if [ ! -f /config/config.xml ]; then
+            mkdir -p /config
+            printf '%s\n' \
+              '<Config>' \
+              '<BindAddress>*</BindAddress>' \
+              '<Port>7878</Port>' \
+              '<SslPort>9898</SslPort>' \
+              '<EnableSsl>False</EnableSsl>' \
+              '<LaunchBrowser>True</LaunchBrowser>' \
+              "<ApiKey>${API_KEY}</ApiKey>" \
+              '<AuthenticationMethod>None</AuthenticationMethod>' \
+              '<AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>' \
+              '<Branch>master</Branch>' \
+              '<LogLevel>info</LogLevel>' \
+              '<SslCertPath></SslCertPath>' \
+              '<SslCertPassword></SslCertPassword>' \
+              '<UrlBase></UrlBase>' \
+              '<InstanceName>Radarr</InstanceName>' \
+              '<UpdateMechanism>Docker</UpdateMechanism>' \
+              '</Config>' > /config/config.xml
+            echo "Config initialized from secret-backed bootstrap"
+          fi
+          sed -i 's|<AuthenticationRequired>.*</AuthenticationRequired>|<AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>|' /config/config.xml
+          sed -i 's|<AuthenticationMethod>.*</AuthenticationMethod>|<AuthenticationMethod>None</AuthenticationMethod>|' /config/config.xml
+        volumeMounts:
+        - name: radarr-config
+          mountPath: /config
+        - name: radarr-bootstrap-secret
+          mountPath: /bootstrap
+          readOnly: true
+
+      containers:
+      - name: radarr
+        image: linuxserver/radarr:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: PUID
+          value: "1000"
+        - name: PGID
+          value: "1000"
+        - name: TZ
+          value: Europe/Paris
+        ports:
+        - containerPort: 7878
+          name: webui
+        volumeMounts:
+        - name: radarr-config
+          mountPath: /config
+        - name: downloads
+          mountPath: /downloads
+        - name: media
+          mountPath: /movies
+        securityContext:
+          allowPrivilegeEscalation: false
+        resources:
+          requests:
+            cpu: 150m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: 7878
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /ping
+            port: 7878
+          initialDelaySeconds: 30
+          periodSeconds: 10
+
+      volumes:
+      - name: radarr-config
+        persistentVolumeClaim:
+          claimName: radarr-config
+      - name: radarr-bootstrap-secret
+        secret:
+          secretName: radarr-bootstrap
+      - name: downloads
+        persistentVolumeClaim:
+          claimName: downloads
+      - name: media
+        persistentVolumeClaim:
+          claimName: media

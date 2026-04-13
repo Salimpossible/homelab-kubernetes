@@ -1,0 +1,19 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: homelab-wildcard
+  namespace: media
+  labels:
+    environment: homelab
+    managed-by: kustomize
+  annotations:
+    version: "1.0"
+spec:
+  secretName: homelab-wildcard-tls
+  commonName: "*.home.arpa"
+  dnsNames:
+    - "*.home.arpa"
+    - home.arpa
+  issuerRef:
+    kind: ClusterIssuer
+    name: homelab-ca-issuer

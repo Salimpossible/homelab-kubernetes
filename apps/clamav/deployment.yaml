@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clamav
+  namespace: media
+  labels:
+    app: clamav
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clamav
+  template:
+    metadata:
+      labels:
+        app: clamav
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: homelab.io/downloads-local
+                operator: In
+                values:
+                - "true"
+      containers:
+      - name: clamav
+        image: clamav/clamav:latest
+        env:
+        - name: TZ
+          value: Europe/Paris
+        ports:
+        - containerPort: 3310
+          name: clamd
+        volumeMounts:
+        - name: clamav-config
+          mountPath: /var/lib/clamav
+        - name: downloads
+          mountPath: /downloads
+          readOnly: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 2000m
+            memory: 4Gi
+      
+      volumes:
+      - name: clamav-config
+        persistentVolumeClaim:
+          claimName: clamav-config
+      - name: downloads
+        persistentVolumeClaim:
+          claimName: downloads
