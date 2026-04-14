@@ -48,7 +48,8 @@ spec:
         - name: sportarr-config
           mountPath: /config
         - name: media
-          mountPath: /data
+          mountPath: /sports
+          subPath: sports
         resources:
           requests:
             cpu: 250m

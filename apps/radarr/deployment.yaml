@@ -89,6 +89,7 @@ spec:
           mountPath: /downloads
         - name: media
           mountPath: /movies
+          subPath: movies
         securityContext:
           allowPrivilegeEscalation: false
         resources:
