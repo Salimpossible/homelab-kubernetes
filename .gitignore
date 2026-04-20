@@ -33,3 +33,4 @@ kubeconfig
 *.pfx
 homelab-ca.crt
 qbittorrent.home.arpa.crt
+apps/qbittorrent/gluetun-NL-FREE-123.conf
