@@ -5,6 +5,7 @@ metadata:
   namespace: media
   labels:
     app: media-scanner
+    app.kubernetes.io/name: media-scanner
     component: scan-promote
 spec:
   replicas: 1
@@ -21,6 +22,7 @@ spec:
     metadata:
       labels:
         app: media-scanner
+        app.kubernetes.io/name: media-scanner
         component: scan-promote
     spec:
       automountServiceAccountToken: false

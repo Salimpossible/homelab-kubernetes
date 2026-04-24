@@ -6,6 +6,7 @@ metadata:
   labels:
     app: vpn-torrent
     component: download-manager
+    app.kubernetes.io/name: qbittorrent
 spec:
   replicas: 1
   selector:
@@ -17,132 +18,126 @@ spec:
       labels:
         app: vpn-torrent
         component: download-manager
+        app.kubernetes.io/name: qbittorrent
     spec:
       serviceAccountName: qbittorrent-job-trigger
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
-            - matchExpressions:
-              - key: homelab.io/downloads-local
-                operator: In
-                values:
-                - "true"
+              - matchExpressions:
+                  - key: homelab.io/downloads-local
+                    operator: In
+                    values:
+                      - "true"
       terminationGracePeriodSeconds: 30
-      
+
       containers:
-      # VPN Gateway Container
-      - name: gluetun
-        image: qmcgaw/gluetun@sha256:4f1ecfedd717bca7b2d94b405380a717bcf40ba723d82a69428d816744664542
-        imagePullPolicy: IfNotPresent
-        securityContext:
-          capabilities:
-            add:
-              - NET_ADMIN
-          privileged: true
-        env:
-        - name: VPN_TYPE
-          value: openvpn
-        - name: WIREGUARD_PRIVATE_KEY
-          valueFrom:
-            secretKeyRef:
-              name: media-stack-env
-              key: WIREGUARD_PRIVATE_KEY
-        - name: OPENVPN_USER
-          valueFrom:
-            secretKeyRef:
-              name: media-stack-env
-              key: OPENVPN_USER
-        - name: OPENVPN_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: media-stack-env
-              key: OPENVPN_PASSWORD
-        - name: VPN_SERVICE_PROVIDER
-          valueFrom:
-            secretKeyRef:
-              name: media-stack-env
-              key: VPNSP
-        - name: SERVER_COUNTRIES
-          value: Netherlands
-        - name: HEALTH_TARGET_ADDRESSES
-          value: cloudflare.com:443,github.com:443
-        - name: FIREWALL
-          value: "on"
-        - name: FIREWALL_OUTBOUND_SUBNETS
-          value: "10.42.0.0/16,10.43.0.0/16,192.168.0.0/16"
-        - name: FIREWALL_VPN_INPUT_PORTS
-          value: "6881"
-        volumeMounts:
-        - name: gluetun-config
-          mountPath: /gluetun
-        resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
-            ephemeral-storage: 128Mi
-          limits:
-            cpu: 500m
-            memory: 512Mi
-            ephemeral-storage: 512Mi
-      
-      # qBittorrent Container
-      - name: qbittorrent
-        image: linuxserver/qbittorrent@sha256:1fc78c81850d658f17701bfa9d8de58ccc12ff27d36a9a176c6299e55aaf4b4e
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: PUID
-          value: "1000"
-        - name: PGID
-          value: "1000"
-        - name: TZ
-          value: Europe/Paris
-        - name: WEBUI_PORT
-          value: "8080"
-        - name: TORRENTING_PORT
-          value: "6881"
-        ports:
-        - containerPort: 8080
-          name: webui
-        volumeMounts:
-        - name: qbittorrent-config
-          mountPath: /config
-        - name: downloads
-          mountPath: /downloads
-        - name: media
-          mountPath: /media
-        - name: qbittorrent-hooks
-          mountPath: /hooks
-          readOnly: true
-        resources:
-          requests:
-            cpu: 500m
-            memory: 1Gi
-            ephemeral-storage: 256Mi
-          limits:
-            cpu: 2000m
-            memory: 4Gi
-            ephemeral-storage: 1Gi
-        livenessProbe:
-          tcpSocket:
-            port: 8080
-          initialDelaySeconds: 60
-          periodSeconds: 30
-          failureThreshold: 5
-      
+        # VPN Gateway Container
+        - name: gluetun
+          image: qmcgaw/gluetun@sha256:4f1ecfedd717bca7b2d94b405380a717bcf40ba723d82a69428d816744664542
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+            privileged: true
+          env:
+            - name: DOT
+              value: "off"
+            # --- Required for NordVPN WireGuard ---
+            - name: VPN_SERVICE_PROVIDER
+              value: "nordvpn"
+            - name: VPN_TYPE
+              value: "wireguard"
+            - name: WIREGUARD_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: media-stack-env
+                  key: WIREGUARD_PRIVATE_KEY
+
+            - name: SERVER_COUNTRIES
+              value: "Switzerland, Netherlands, Ireland"   # close + good P2P footprint[web:89][web:205]
+            - name: SERVER_CATEGORIES
+              value: "P2P"  
+            - name: FIREWALL_INPUT_PORTS
+              value: "8080,6881"  # 8080=WebUI, 6881=torrent listening port
+            - name: HEALTH_VPN_DURATION_INITIAL
+              value: "120s"                 # wait up to 120s on first connect[web:193][web:213]
+            - name: HEALTH_VPN_DURATION_ADDITION
+              value: "30s"      
+            - name: TZ
+              value: "Europe/Paris"
+            - name: LOG_LEVEL
+              value: "info"
+              
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+              ephemeral-storage: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+              ephemeral-storage: 512Mi
+
+        # qBittorrent Container
+        - name: qbittorrent
+          image: linuxserver/qbittorrent@sha256:1fc78c81850d658f17701bfa9d8de58ccc12ff27d36a9a176c6299e55aaf4b4e
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: Europe/Paris
+            - name: WEBUI_PORT
+              value: "8080"
+            - name: TORRENTING_PORT
+              value: "6881"
+          ports:
+            - containerPort: 8080
+              name: webui
+          volumeMounts:
+            - name: qbittorrent-config
+              mountPath: /config
+            - name: downloads
+              mountPath: /downloads
+            - name: media
+              mountPath: /media
+            - name: qbittorrent-hooks
+              mountPath: /hooks
+              readOnly: true
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+              ephemeral-storage: 256Mi
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+              ephemeral-storage: 1Gi
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            failureThreshold: 5
+
       volumes:
-      - name: gluetun-config
-        persistentVolumeClaim:
-          claimName: gluetun-config
-      - name: qbittorrent-hooks
-        configMap:
-          name: qbittorrent-config
-      - name: qbittorrent-config
-        persistentVolumeClaim:
-          claimName: qbittorrent-config
-      - name: downloads
-        persistentVolumeClaim:
-          claimName: downloads
-      - name: media
-        persistentVolumeClaim:
-          claimName: media
+        - name: gluetun-config
+          persistentVolumeClaim:
+            claimName: gluetun-config
+        - name: qbittorrent-hooks
+          configMap:
+            name: qbittorrent-config
+        - name: qbittorrent-config
+          persistentVolumeClaim:
+            claimName: qbittorrent-config
+        - name: downloads
+          persistentVolumeClaim:
+            claimName: downloads
+        - name: media
+          persistentVolumeClaim:
+            claimName: media

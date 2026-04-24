@@ -7,6 +7,7 @@ resources:
 - infrastructure/storage/storageclass.yaml
 - infrastructure/storage/shared-pvc.yaml
 - infrastructure/cert-manager
+- infrastructure/monitoring/homepage
 
 # Secrets
 - infrastructure/storage/secret-env.yaml

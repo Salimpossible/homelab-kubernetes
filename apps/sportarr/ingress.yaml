@@ -5,6 +5,12 @@ metadata:
   namespace: media
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Sportarr"
+    gethomepage.dev/group: "Media"
+    gethomepage.dev/icon: "sportarr.png"
+    gethomepage.dev/description: "Sports automation"
+    gethomepage.dev/href: "https://sportarr.home.arpa/"
 spec:
   ingressClassName: nginx
   tls:

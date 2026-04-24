@@ -10,6 +10,12 @@ metadata:
       proxy_set_header X-Forwarded-Host $host;
       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
       proxy_set_header X-Forwarded-Proto $scheme;
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "qBittorrent"
+    gethomepage.dev/group: "Media"
+    gethomepage.dev/icon: "qbittorrent.png"
+    gethomepage.dev/description: "BitTorrent client"
+    gethomepage.dev/href: "https://qbittorrent.home.arpa/"
 spec:
   ingressClassName: nginx
   tls:

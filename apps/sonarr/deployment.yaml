@@ -5,6 +5,7 @@ metadata:
   namespace: media
   labels:
     app: sonarr
+    app.kubernetes.io/name: sonarr
 spec:
   replicas: 1
   selector:
@@ -14,6 +15,7 @@ spec:
     metadata:
       labels:
         app: sonarr
+        app.kubernetes.io/name: sonarr
     spec:
       securityContext:
         fsGroup: 1000

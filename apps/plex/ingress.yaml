@@ -5,6 +5,12 @@ metadata:
   namespace: media
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Plex"
+    gethomepage.dev/group: "Media"
+    gethomepage.dev/icon: "plex.png"
+    gethomepage.dev/description: "Media server"
+    gethomepage.dev/href: "https://plex.home.arpa/"
 spec:
   ingressClassName: nginx
   tls:

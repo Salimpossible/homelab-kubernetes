@@ -5,6 +5,7 @@ metadata:
   namespace: media
   labels:
     app: clamav
+    app.kubernetes.io/name: clamav
 spec:
   replicas: 1
   selector:
@@ -14,6 +15,7 @@ spec:
     metadata:
       labels:
         app: clamav
+        app.kubernetes.io/name: clamav
     spec:
       affinity:
         nodeAffinity:

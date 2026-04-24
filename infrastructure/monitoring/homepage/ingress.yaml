@@ -1,30 +1,30 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: prowlarr
-  namespace: media
+  name: homepage
+  namespace: monitoring
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     gethomepage.dev/enabled: "true"
-    gethomepage.dev/name: "Prowlarr"
-    gethomepage.dev/group: "Media"
-    gethomepage.dev/icon: "prowlarr.png"
-    gethomepage.dev/description: "Indexer manager"
-    gethomepage.dev/href: "https://prowlarr.home.arpa/"
+    gethomepage.dev/name: "Homepage"
+    gethomepage.dev/group: "Monitoring"
+    gethomepage.dev/icon: "homepage.png"
+    gethomepage.dev/description: "Cluster homepage"
+    gethomepage.dev/href: "https://homepage.home.arpa/"
 spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - prowlarr.home.arpa
+        - homepage.home.arpa
       secretName: homelab-wildcard-tls
   rules:
-  - host: prowlarr.home.arpa
+  - host: homepage.home.arpa
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: prowlarr
+            name: homepage
             port:
-              number: 9696
+              number: 3000

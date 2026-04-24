@@ -5,3 +5,4 @@ resources:
   - ca-secret.yaml
   - cluster-issuer.yaml
   - media-wildcard-cert.yaml
+  - monitoring-wildcard-cert.yaml

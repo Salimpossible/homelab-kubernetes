@@ -5,6 +5,7 @@ metadata:
   namespace: media
   labels:
     app: sportarr
+    app.kubernetes.io/name: sportarr
 spec:
   replicas: 1
   selector:
@@ -14,6 +15,7 @@ spec:
     metadata:
       labels:
         app: sportarr
+        app.kubernetes.io/name: sportarr
     spec:
       securityContext:
         fsGroup: 100

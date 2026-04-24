@@ -1,0 +1,12 @@
+resources:
+  - homepage-serviceaccount.yaml
+  - homepage-secret.yaml
+  - homepage-configmap.yaml
+  - clusterrole.yaml
+  - clusterrolebinding.yaml
+  - service.yaml
+  - deployment.yaml
+  - ingress.yaml
+
+commonLabels:
+  app.kubernetes.io/name: homepage

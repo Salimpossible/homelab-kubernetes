@@ -2,39 +2,30 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: homepage
-  namespace: default
+  namespace: monitoring
   labels:
     app.kubernetes.io/name: homepage
 data:
+  # Tell Homepage to run in-cluster and read ingresses
   kubernetes.yaml: |
     mode: cluster
+    ingress: true
+    labelSelector: app
+    # traefik: true   # enable if you also use Traefik IngressRoute
+    # gateway: true   # enable if you use Gateway API
   settings.yaml: ""
-  #settings.yaml: |
-  #  providers:
-  #    longhorn:
-  #      url: https://longhorn.my.network
   custom.css: ""
   custom.js: ""
+  # You can keep these minimal and rely mostly on automatic discovery
   bookmarks.yaml: |
-    - Developer:
-        - Github:
-            - abbr: GH
-              href: https://github.com/
+    - Dev:
+        - K8s Dashboard:
+            href: https://kubernetes-dashboard.home.arpa/
   services.yaml: |
-    - Torrenting:
-        - Qbittorrent:
-            href: http://localhost/
-            description: Homepage is awesome
-
-    - My Second Group:
-        - My Second Service:
-            href: http://localhost/
-            description: Homepage is the best
-
-    - My Third Group:
-        - My Third Service:
-            href: http://localhost/
-            description: Homepage is 😎
+    - Cluster:
+        - Homepage:
+            href: https://homepage.home.arpa/
+            description: Main homelab dashboard
   widgets.yaml: |
     - kubernetes:
         cluster:
