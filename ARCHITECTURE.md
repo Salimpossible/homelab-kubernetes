@@ -15,6 +15,8 @@
 
 Example: `https://radarr.home.arpa -> radarr Service:7878`
 
+For non-HTTP protocols (for example BitTorrent peer traffic), ingress-nginx stream mappings can expose specific TCP/UDP ports on the same ingress LoadBalancer and forward them to an internal `ClusterIP` Service.
+
 ## Required Ingress Shape
 
 - `spec.ingressClassName: nginx`
@@ -41,12 +43,12 @@ Example: `https://radarr.home.arpa -> radarr Service:7878`
 ## Storage Strategy
 
 - `local-path` = node-local, `ReadWriteOnce` config/state volumes.
-- `smb-media` = shared media library, `ReadWriteMany`, `ReclaimPolicy: Retain`.
+- `smb-media` = shared SMB-backed volumes, `ReadWriteMany`, `ReclaimPolicy: Retain`.
 - Stateful app configs use `local-path`: Plex, Radarr, Sonarr, Sportarr, qBittorrent, Prowlarr, Gluetun, ClamAV.
-- Shared library uses PVC `media` on `smb-media`: Plex, Sportarr.
-- Downloads workflow: qBittorrent → `local-path` `downloads` → ClamAV scan → promote to `smb-media/sports` (Sportarr).
+- Shared library/workspaces use PVCs on `smb-media`: `media` (library) and `downloads-smb` (download workspace).
+- Downloads workflow: qBittorrent → `smb-media` `downloads-smb` → ClamAV scan → promote into library paths on `smb-media`.
 - Backup focus: app config PVCs and SMB share data.
-- Scheduling implication: `local-path` PVCs are node-coupled; avoid moving those pods across nodes without migration plan.
+- Scheduling implication: app config `local-path` PVCs are node-coupled; avoid moving those pods across nodes without migration plan.
 
 ## DNS
 

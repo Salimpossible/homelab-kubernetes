@@ -32,5 +32,5 @@ spec:
               claimName: clamav-config
           - name: downloads
             persistentVolumeClaim:
-              claimName: downloads
+              claimName: downloads-smb
           restartPolicy: OnFailure

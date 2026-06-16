@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vpn-torrent
+  namespace: media
+spec:
+  template:
+    metadata:
+      annotations:
+        homelab.io/vpn-mode: "disabled-temporary"
+        kubectl.kubernetes.io/restartedAt: "2026-06-15T13:12:00Z"
+    spec:
+      containers:
+        - name: gluetun
+          $patch: delete
+      volumes:
+        - name: gluetun-config
+          $patch: delete
+

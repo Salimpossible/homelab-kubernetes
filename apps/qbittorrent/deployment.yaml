@@ -43,41 +43,37 @@ spec:
                 - NET_ADMIN
             privileged: true
           env:
-            - name: DOT
-              value: "off"
-            # --- Required for NordVPN WireGuard ---
             - name: VPN_SERVICE_PROVIDER
               value: "nordvpn"
             - name: VPN_TYPE
-              value: "wireguard"
-            - name: WIREGUARD_PRIVATE_KEY
+              value: "openvpn"
+            - name: OPENVPN_USER
               valueFrom:
                 secretKeyRef:
                   name: media-stack-env
-                  key: WIREGUARD_PRIVATE_KEY
-
-            - name: SERVER_COUNTRIES
-              value: "Switzerland, Netherlands, Ireland"   # close + good P2P footprint[web:89][web:205]
-            - name: SERVER_CATEGORIES
-              value: "P2P"  
-            - name: FIREWALL_INPUT_PORTS
-              value: "8080,6881"  # 8080=WebUI, 6881=torrent listening port
-            - name: HEALTH_VPN_DURATION_INITIAL
-              value: "120s"                 # wait up to 120s on first connect[web:193][web:213]
-            - name: HEALTH_VPN_DURATION_ADDITION
-              value: "30s"      
+                  key: OPENVPN_USER
+            - name: OPENVPN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: media-stack-env
+                  key: OPENVPN_PASSWORD
+            - name: BLOCK_MALICIOUS
+              value: "off"
+            - name: DOT
+              value: "on"
+            - name: LOG_LEVEL
+              value: "debug"
             - name: TZ
               value: "Europe/Paris"
-            - name: LOG_LEVEL
-              value: "info"
-              
+            - name: FIREWALL_OUTBOUND_SUBNETS
+              value: "10.42.0.0/16,10.43.0.0/16"
           resources:
             requests:
               cpu: 100m
               memory: 128Mi
               ephemeral-storage: 128Mi
             limits:
-              cpu: 500m
+              cpu: 500m 
               memory: 512Mi
               ephemeral-storage: 512Mi
 
@@ -91,14 +87,21 @@ spec:
             - name: PGID
               value: "1000"
             - name: TZ
-              value: Europe/Paris
-            - name: WEBUI_PORT
+              value: "Europe/Paris"
+            - name: WEBUIPORT
               value: "8080"
-            - name: TORRENTING_PORT
+            - name: TORRENTINGPORT
               value: "6881"
           ports:
-            - containerPort: 8080
-              name: webui
+          - name: webui
+            containerPort: 8080
+            protocol: TCP
+          - name: bittorrent-tcp
+            containerPort: 6881
+            protocol: TCP
+          - name: bittorrent-udp
+            containerPort: 6881
+            protocol: UDP
           volumeMounts:
             - name: qbittorrent-config
               mountPath: /config
@@ -124,6 +127,7 @@ spec:
             initialDelaySeconds: 60
             periodSeconds: 30
             failureThreshold: 5
+        # NO ports section - gluetun handles all networking
 
       volumes:
         - name: gluetun-config
@@ -137,7 +141,7 @@ spec:
             claimName: qbittorrent-config
         - name: downloads
           persistentVolumeClaim:
-            claimName: downloads
+            claimName: downloads-smb
         - name: media
           persistentVolumeClaim:
             claimName: media

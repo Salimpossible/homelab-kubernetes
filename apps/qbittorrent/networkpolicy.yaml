@@ -1,0 +1,39 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vpn-torrent-ingress-guard
+  namespace: media
+  labels:
+    app: vpn-torrent
+    component: download-manager
+spec:
+  podSelector:
+    matchLabels:
+      app: vpn-torrent
+  policyTypes:
+    - Ingress
+  ingress:
+    # WebUI/API access from ingress controller namespace and media namespace apps.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-system
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: media
+      ports:
+        - protocol: TCP
+          port: 8080
+        - protocol: TCP
+          port: 6881
+        - protocol: UDP
+          port: 6881
+    # BitTorrent peer traffic from the internet.
+    - from:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 6881
+        - protocol: UDP
+          port: 6881

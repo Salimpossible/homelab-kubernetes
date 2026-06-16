@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-ingress-udp-services
+  namespace: ingress-system
+data:
+  "6881": "media/vpn-torrent:6881"

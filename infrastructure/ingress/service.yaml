@@ -27,3 +27,11 @@ spec:
     - name: https
       port: 443
       targetPort: 443
+    - name: bittorrent-tcp
+      port: 6881
+      targetPort: 6881
+      protocol: TCP
+    - name: bittorrent-udp
+      port: 6881
+      targetPort: 6881
+      protocol: UDP

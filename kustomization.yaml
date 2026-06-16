@@ -37,6 +37,7 @@ resources:
 - apps/qbittorrent/configmap.yaml
 - apps/qbittorrent/rbac.yaml
 - apps/qbittorrent/ingress.yaml
+- apps/qbittorrent/networkpolicy.yaml
 
 - apps/clamav/pvc.yaml
 - apps/clamav/configmap.yaml

@@ -7,13 +7,13 @@ data:
   home.arpa.server: |
     home.arpa {
       hosts {
-        192.168.1.23 qbittorrent.home.arpa
-        192.168.1.23 sonarr.home.arpa
-        192.168.1.23 radarr.home.arpa
-        192.168.1.23 plex.home.arpa
-        192.168.1.23 prowlarr.home.arpa
-        192.168.1.23 sportarr.home.arpa
-        192.168.1.23 homepage.home.arpa
+        192.168.1.18 qbittorrent.home.arpa
+        192.168.1.18 sonarr.home.arpa
+        192.168.1.18 radarr.home.arpa
+        192.168.1.18 plex.home.arpa
+        192.168.1.18 prowlarr.home.arpa
+        192.168.1.18 sportarr.home.arpa
+        192.168.1.18 homepage.home.arpa
         fallthrough
       }
       cache 30

@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: downloads
+  name: downloads-smb
   namespace: media
   annotations:
-    description: Node-local downloads workspace shared by media automation workloads on a dedicated node
+    description: SMB-backed downloads workspace shared by media automation workloads
 spec:
   accessModes:
-    - ReadWriteOnce
-  storageClassName: local-path
+    - ReadWriteMany
+  storageClassName: smb-media
   resources:
     requests:
       storage: 350Gi

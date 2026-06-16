@@ -10,10 +10,11 @@ resources:
   - deployment.yaml
   - service.yaml
   - ingress.yaml
+  - networkpolicy.yaml
 
 commonLabels:
   app: vpn-torrent
   component: download-manager
 
 commonAnnotations:
-  description: "qBittorrent with NordVPN (gluetun) - VPN gateway for secure torrent downloads"
+  description: "qBittorrent stack with optional NordVPN (gluetun) sidecar"

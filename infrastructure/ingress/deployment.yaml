@@ -39,6 +39,8 @@ spec:
             - --ingress-class=nginx
             - --controller-class=k8s.io/ingress-nginx  # Must match IngressClass spec.controller
             - --configmap=$(POD_NAMESPACE)/nginx-ingress-config
+            - --tcp-services-configmap=$(POD_NAMESPACE)/nginx-ingress-tcp-services
+            - --udp-services-configmap=$(POD_NAMESPACE)/nginx-ingress-udp-services
             - --watch-ingress-without-class=false
           env:
             # Injected so the controller knows its own identity (used for leader election)
@@ -55,6 +57,12 @@ spec:
               containerPort: 80
             - name: https
               containerPort: 443
+            - name: bittorrent-tcp
+              containerPort: 6881
+              protocol: TCP
+            - name: bittorrent-udp
+              containerPort: 6881
+              protocol: UDP
           # The controller needs these to function correctly
           securityContext:
             allowPrivilegeEscalation: true
@@ -70,3 +78,12 @@ spec:
               port: 10254
             initialDelaySeconds: 10
             periodSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+              ephemeral-storage: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+              ephemeral-storage: 512Mi

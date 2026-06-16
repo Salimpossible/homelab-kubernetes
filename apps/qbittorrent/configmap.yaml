@@ -136,7 +136,7 @@ data:
               {
                 "name": "downloads",
                 "persistentVolumeClaim": {
-                  "claimName": "downloads"
+                  "claimName": "downloads-smb"
                 }
               },
               {
