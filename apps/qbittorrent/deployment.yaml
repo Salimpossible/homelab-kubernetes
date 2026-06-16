@@ -43,20 +43,15 @@ spec:
                 - NET_ADMIN
             privileged: true
           env:
+            # Non-sensitive: custom WireGuard provider config
             - name: VPN_SERVICE_PROVIDER
-              value: "nordvpn"
+              value: "custom"
             - name: VPN_TYPE
-              value: "openvpn"
-            - name: OPENVPN_USER
-              valueFrom:
-                secretKeyRef:
-                  name: media-stack-env
-                  key: OPENVPN_USER
-            - name: OPENVPN_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: media-stack-env
-                  key: OPENVPN_PASSWORD
+              value: "wireguard"
+            - name: WIREGUARD_ALLOWED_IPS
+              value: "0.0.0.0/0,::/0"
+            - name: FIREWALL_VPN_INPUT_PORTS
+              value: "6881"
             - name: BLOCK_MALICIOUS
               value: "off"
             - name: DOT
@@ -67,13 +62,39 @@ spec:
               value: "Europe/Paris"
             - name: FIREWALL_OUTBOUND_SUBNETS
               value: "10.42.0.0/16,10.43.0.0/16"
+            # Sensitive: from secret
+            - name: WIREGUARD_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: media-stack-env
+                  key: WIREGUARD_PRIVATE_KEY
+            - name: WIREGUARD_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: media-stack-env
+                  key: WIREGUARD_PUBLIC_KEY
+            - name: WIREGUARD_ADDRESSES
+              valueFrom:
+                secretKeyRef:
+                  name: media-stack-env
+                  key: WIREGUARD_ADDRESSES
+            - name: WIREGUARD_ENDPOINT_IP
+              valueFrom:
+                secretKeyRef:
+                  name: media-stack-env
+                  key: WIREGUARD_ENDPOINT_IP
+            - name: WIREGUARD_ENDPOINT_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: media-stack-env
+                  key: WIREGUARD_ENDPOINT_PORT
           resources:
             requests:
               cpu: 100m
               memory: 128Mi
               ephemeral-storage: 128Mi
             limits:
-              cpu: 500m 
+              cpu: 500m
               memory: 512Mi
               ephemeral-storage: 512Mi
 
