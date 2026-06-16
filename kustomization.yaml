@@ -39,9 +39,6 @@ resources:
 - apps/qbittorrent/ingress.yaml
 - apps/qbittorrent/networkpolicy.yaml
 
-- apps/clamav/pvc.yaml
-- apps/clamav/configmap.yaml
-
 - apps/prowlarr/deployment.yaml
 - apps/prowlarr/service.yaml
 - apps/prowlarr/pvc.yaml
