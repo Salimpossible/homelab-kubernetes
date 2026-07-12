@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jellyfin
+  namespace: media
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Jellyfin"
+    gethomepage.dev/group: "Media"
+    gethomepage.dev/icon: "jellyfin.png"
+    gethomepage.dev/description: "Media server"
+    gethomepage.dev/href: "https://jellyfin.home.arpa/"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - jellyfin.home.arpa
+      secretName: homelab-wildcard-tls
+  rules:
+  - host: jellyfin.home.arpa
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: jellyfin
+            port:
+              number: 8096

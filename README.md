@@ -9,7 +9,7 @@ Use these two docs only:
 
 ## Scope
 
-- Workloads: Plex, qBittorrent (behind VPN sidecar pattern), Radarr, Sonarr, ClamAV.
+- Workloads: Plex, Jellyfin, qBittorrent (behind VPN sidecar pattern), Radarr, Sonarr, ClamAV.
 - Platform: ingress-nginx, cert-manager, storage and namespace infrastructure.
 - Deployment style: declarative manifests via kustomize.
 

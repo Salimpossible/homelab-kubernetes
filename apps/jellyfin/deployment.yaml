@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jellyfin
+  namespace: media
+  labels:
+    app: jellyfin
+    app.kubernetes.io/name: jellyfin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jellyfin
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: jellyfin
+        app.kubernetes.io/name: jellyfin
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: homelab.io/downloads-local
+                operator: In
+                values:
+                - "true"
+      containers:
+      - name: jellyfin
+        image: jellyfin/jellyfin:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: TZ
+          value: Europe/Paris
+        - name: JELLYFIN_PublishedServerUrl
+          value: https://jellyfin.home.arpa
+        ports:
+        - containerPort: 8096
+          name: webui
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: jellyfin-config
+          mountPath: /config
+        - name: jellyfin-cache
+          mountPath: /cache
+        - name: media
+          mountPath: /media
+          readOnly: true
+        - name: tmp
+          mountPath: /tmp
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: 1500m
+            memory: 2Gi
+        startupProbe:
+          tcpSocket:
+            port: 8096
+          failureThreshold: 30
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 8096
+          initialDelaySeconds: 30
+          periodSeconds: 20
+        readinessProbe:
+          tcpSocket:
+            port: 8096
+          initialDelaySeconds: 10
+          periodSeconds: 10
+      volumes:
+      - name: jellyfin-config
+        persistentVolumeClaim:
+          claimName: jellyfin-config
+      - name: jellyfin-cache
+        emptyDir:
+          sizeLimit: 5Gi
+      - name: media
+        persistentVolumeClaim:
+          claimName: media
+      - name: tmp
+        emptyDir: {}

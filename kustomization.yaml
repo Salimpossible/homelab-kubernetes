@@ -19,6 +19,11 @@ resources:
 - apps/plex/configmap.yaml
 - apps/plex/ingress.yaml
 
+- apps/jellyfin/deployment.yaml
+- apps/jellyfin/service.yaml
+- apps/jellyfin/pvc.yaml
+- apps/jellyfin/ingress.yaml
+
 - apps/radarr/deployment.yaml
 - apps/radarr/service.yaml
 - apps/radarr/pvc.yaml
