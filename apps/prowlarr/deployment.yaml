@@ -21,6 +21,13 @@ spec:
         fsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
+      # dnsPolicy: None
+      
+      # dnsConfig:
+      #   nameservers:
+      #     - 1.1.1.1  # Cloudflare
+      #     - 8.8.8.8  # Google
+          
       containers:
       - name: prowlarr
         image: lscr.io/linuxserver/prowlarr:latest
@@ -47,22 +54,29 @@ spec:
           limits:
             cpu: 500m
             memory: 512Mi
+        startupProbe:
+          httpGet:
+            path: /ping
+            port: 9696
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
         livenessProbe:
           httpGet:
             path: /ping
             port: 9696
-          initialDelaySeconds: 30
-          periodSeconds: 10
+          initialDelaySeconds: 0
+          periodSeconds: 20
           timeoutSeconds: 5
-          failureThreshold: 3
+          failureThreshold: 5
         readinessProbe:
           httpGet:
             path: /ping
             port: 9696
-          initialDelaySeconds: 10
+          initialDelaySeconds: 0
           periodSeconds: 10
           timeoutSeconds: 5
-          failureThreshold: 3
+          failureThreshold: 6
       volumes:
       - name: prowlarr-config
         persistentVolumeClaim:

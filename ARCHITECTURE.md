@@ -46,7 +46,7 @@ For non-HTTP protocols (for example BitTorrent peer traffic), ingress-nginx stre
 - `smb-media` = shared SMB-backed volumes, `ReadWriteMany`, `ReclaimPolicy: Retain`.
 - Stateful app configs use `local-path`: Plex, Radarr, Sonarr, Sportarr, qBittorrent, Prowlarr, Gluetun, ClamAV.
 - Shared library/workspaces use PVCs on `smb-media`: `media` (library) and `downloads-smb` (download workspace).
-- Downloads workflow: qBittorrent → `smb-media` `downloads-smb` → ClamAV scan → promote into library paths on `smb-media`.
+- Downloads workflow: qBittorrent writes to `smb-media` `downloads-smb`; Radarr, Sonarr, and Sportarr mount the same workspace for import management; media is then promoted into library paths on `smb-media`.
 - Backup focus: app config PVCs and SMB share data.
 - Scheduling implication: app config `local-path` PVCs are node-coupled; avoid moving those pods across nodes without migration plan.
 

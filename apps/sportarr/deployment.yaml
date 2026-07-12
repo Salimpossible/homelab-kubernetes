@@ -49,6 +49,8 @@ spec:
         volumeMounts:
         - name: sportarr-config
           mountPath: /config
+        - name: downloads
+          mountPath: /downloads
         - name: media
           mountPath: /sports
           subPath: sports
@@ -79,6 +81,9 @@ spec:
       - name: sportarr-config
         persistentVolumeClaim:
           claimName: sportarr-config
+      - name: downloads
+        persistentVolumeClaim:
+          claimName: downloads-smb
       - name: media
         persistentVolumeClaim:
           claimName: media
