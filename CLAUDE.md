@@ -54,9 +54,19 @@ For non-HTTP protocols (e.g. BitTorrent peer traffic), ingress-nginx stream mapp
 - Scheduling implication: app config `local-path` PVCs are node-coupled; avoid moving those pods across nodes without a migration plan.
 - Known orphaned PVCs still bound in-cluster but unused by any current manifest: `plex-config` (smb-media, superseded by `plex-config-laptop`), `clamav-config`, legacy `downloads` (local-path). Don't build on these; ask before deleting.
 
+## Secrets
+
+- `infrastructure/storage/secret-env.yaml` (the `media-stack-env` Secret, consumed by qBittorrent/Gluetun and Plex) is a plain Kubernetes Secret manifest referenced by the root `kustomization.yaml`, but the file itself is **gitignored** (`**/secret-env.yaml` in `.gitignore`) and has never been committed — it only exists locally on whichever machine applies the stack. That avoids a git-history leak, but also means it's un-versioned, unbacked-up, and single-machine — nothing enforces that it matches the live cluster.
+- Keep this file in sync with whatever is actually live in the cluster (`kubectl get secret media-stack-env -n media -o yaml`) before running `kubectl apply -k .`. It has drifted before (missing `WIREGUARD_ADDRESSES`/`WIREGUARD_ENDPOINT_IP`/`WIREGUARD_ENDPOINT_PORT` keys entirely, stale `WIREGUARD_PUBLIC_KEY`) — because it's local-only, a stale copy on the applying machine will silently revert a live fix with no diff/review to catch it. `.env.example` at the repo root is the template for its shape, not a live source of truth.
+
 ## Networking Extras
 
 - `overlays/qbittorrent-no-vpn/`: patches qBittorrent to skip the Gluetun sidecar, for VPN troubleshooting only. Not applied by default.
+- Gluetun connects to a self-hosted "custom" WireGuard VPN server (not a commercial VPN provider), currently an AWS EC2 instance. `WIREGUARD_ENDPOINT_IP`/`WIREGUARD_PUBLIC_KEY` in `media-stack-env` must match that server's actual current public IP and WireGuard interface public key — if the server's keypair or IP ever changes and this secret isn't updated to match, the tunnel fails silently (handshake drops with no error, looks like a generic network/DNS problem). Cross-check both sides with `wg show` on the server before assuming a k8s-side networking bug.
+
+## Image Versioning
+
+- qBittorrent and Gluetun (`apps/qbittorrent/deployment.yaml`) intentionally use major-version-locked floating tags (`linuxserver/qbittorrent:5`, `qmcgaw/gluetun:v3`) with `imagePullPolicy: Always`, not digest pins — the user prefers automatic patch/minor security updates over strict reproducibility for these two images. This only takes effect on pod (re)creation (rollout, reschedule, crash-restart), not live in a running container. Don't "fix" this back to digest pinning without asking; it's a deliberate choice, not an oversight.
 
 ## DNS
 
