@@ -68,6 +68,13 @@ For non-HTTP protocols (e.g. BitTorrent peer traffic), ingress-nginx stream mapp
 
 - qBittorrent and Gluetun (`apps/qbittorrent/deployment.yaml`) intentionally use major-version-locked floating tags (`linuxserver/qbittorrent:5`, `qmcgaw/gluetun:v3`) with `imagePullPolicy: Always`, not digest pins — the user prefers automatic patch/minor security updates over strict reproducibility for these two images. This only takes effect on pod (re)creation (rollout, reschedule, crash-restart), not live in a running container. Don't "fix" this back to digest pinning without asking; it's a deliberate choice, not an oversight.
 
+## Monitoring
+
+- `infrastructure/monitoring/homepage/` (gethomepage/homepage, namespace `monitoring`) is the only monitoring in this stack — no Prometheus/Grafana/Alertmanager exist. It's a passive dashboard, not a pushed/paged alert.
+- Homepage's `ClusterRole` already grants cluster-wide `get`/`list` on `pods`/`namespaces`/`nodes`, and `kubernetes.yaml` sets `mode: cluster`, `labelSelector: app`. `services.yaml` (in `homepage-configmap.yaml`) lists every currently-deployed app with `namespace: media` + `app: <label value>`, which makes each tile show live pod-readiness status instead of being a static link.
+- Adding a new app to the stack means also adding a matching `services.yaml` entry (namespace + `app` label value) or it silently won't show status on the dashboard, just nothing.
+- Status is only as good as the container's probes. A `Running` pod with a probe-less container looks healthy on the dashboard even if that container is internally broken — this bit us with the Gluetun sidecar (see Networking Extras): it had no probe at all, so a dead WireGuard tunnel never showed as unhealthy anywhere. Gluetun's container now has a `readinessProbe`/`livenessProbe` against its own built-in health server (`HEALTH_SERVER_ADDRESS: ":9999"`, path `/`) so a tunnel failure flips the `vpn-torrent` pod to not-ready and the qBittorrent tile on Homepage goes red — not just when the pod crashes. If you add a probe-less sidecar to any other app, its failures similarly won't surface anywhere.
+
 ## DNS
 
 - All app hosts must resolve to the ingress IP.

@@ -26,6 +26,37 @@ data:
         - Homepage:
             href: https://homepage.home.arpa/
             description: Main homelab dashboard
+    - Media:
+        - Plex:
+            href: https://plex.home.arpa/
+            namespace: media
+            app: plex
+        - Jellyfin:
+            href: https://jellyfin.home.arpa/
+            namespace: media
+            app: jellyfin
+        - qBittorrent (Gluetun VPN):
+            href: https://qbittorrent.home.arpa/
+            description: Status reflects the whole pod, including the Gluetun VPN sidecar
+            namespace: media
+            app: vpn-torrent
+    - Arr Stack:
+        - Radarr:
+            href: https://radarr.home.arpa/
+            namespace: media
+            app: radarr
+        - Sonarr:
+            href: https://sonarr.home.arpa/
+            namespace: media
+            app: sonarr
+        - Prowlarr:
+            href: https://prowlarr.home.arpa/
+            namespace: media
+            app: prowlarr
+        - Sportarr:
+            href: https://sportarr.home.arpa/
+            namespace: media
+            app: sportarr
   widgets.yaml: |
     - kubernetes:
         cluster:

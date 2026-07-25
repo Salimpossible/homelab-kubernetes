@@ -70,6 +70,8 @@ spec:
               value: "Europe/Paris"
             - name: FIREWALL_OUTBOUND_SUBNETS
               value: "10.42.0.0/16,10.43.0.0/16"
+            - name: HEALTH_SERVER_ADDRESS
+              value: ":9999"
             # Sensitive: from secret
             - name: WIREGUARD_PRIVATE_KEY
               valueFrom:
@@ -105,6 +107,20 @@ spec:
               cpu: 500m
               memory: 512Mi
               ephemeral-storage: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 9999
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 9999
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            failureThreshold: 5
 
         # qBittorrent Container
         - name: qbittorrent
