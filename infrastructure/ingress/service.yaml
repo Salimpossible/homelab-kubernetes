@@ -18,6 +18,7 @@ metadata:
     app: nginx-ingress
 spec:
   type: LoadBalancer
+  externalTrafficPolicy: Local  # preserve real client source IP (single-node cluster, no cross-node routing cost)
   selector:
     app: nginx-ingress  # Routes to pods with this label (matches the Deployment)
   ports:
