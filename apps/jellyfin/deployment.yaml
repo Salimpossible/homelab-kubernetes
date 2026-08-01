@@ -45,8 +45,6 @@ spec:
         env:
         - name: TZ
           value: Europe/Paris
-        - name: JELLYFIN_PublishedServerUrl
-          value: https://jellyfin.home.arpa
         ports:
         - containerPort: 8096
           name: webui
