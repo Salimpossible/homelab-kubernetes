@@ -1,25 +1,13 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: downloads-smb
-  namespace: media
-  annotations:
-    description: SMB-backed downloads workspace shared by media automation workloads
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: smb-media
-  resources:
-    requests:
-      storage: 350Gi
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
   name: media
   namespace: media
   annotations:
-    description: Shared media library mounted by Plex, Radarr, and Sonarr
+    description: >-
+      Shared SMB library and downloads workspace (downloads/, movies/, tv/,
+      sports/ as subPaths) mounted by Plex, Jellyfin, Radarr, Sonarr,
+      Sportarr, and qBittorrent
 spec:
   accessModes:
     - ReadWriteMany

@@ -20,7 +20,6 @@ spec:
         component: download-manager
         app.kubernetes.io/name: qbittorrent
     spec:
-      serviceAccountName: qbittorrent-job-trigger
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -150,13 +149,11 @@ spec:
           volumeMounts:
             - name: qbittorrent-config
               mountPath: /config
-            - name: downloads
+            - name: media
               mountPath: /downloads
+              subPath: downloads
             - name: media
               mountPath: /media
-            - name: qbittorrent-hooks
-              mountPath: /hooks
-              readOnly: true
           resources:
             requests:
               cpu: 500m
@@ -178,15 +175,9 @@ spec:
         - name: gluetun-config
           persistentVolumeClaim:
             claimName: gluetun-config
-        - name: qbittorrent-hooks
-          configMap:
-            name: qbittorrent-config
         - name: qbittorrent-config
           persistentVolumeClaim:
             claimName: qbittorrent-config
-        - name: downloads
-          persistentVolumeClaim:
-            claimName: downloads-smb
         - name: media
           persistentVolumeClaim:
             claimName: media

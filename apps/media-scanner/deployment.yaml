@@ -75,6 +75,7 @@ spec:
           readOnly: true
         - name: downloads
           mountPath: /downloads
+          subPath: downloads
         - name: media
           mountPath: /media
         - name: tmp
@@ -125,7 +126,7 @@ spec:
           defaultMode: 0555
       - name: downloads
         persistentVolumeClaim:
-          claimName: downloads-smb
+          claimName: media
       - name: media
         persistentVolumeClaim:
           claimName: media

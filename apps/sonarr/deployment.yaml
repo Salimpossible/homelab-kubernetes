@@ -87,8 +87,9 @@ spec:
         volumeMounts:
         - name: sonarr-config
           mountPath: /config
-        - name: downloads
+        - name: media
           mountPath: /downloads
+          subPath: downloads
         - name: media
           mountPath: /tv
           subPath: tv
@@ -121,9 +122,6 @@ spec:
       - name: sonarr-bootstrap-secret
         secret:
           secretName: sonarr-bootstrap
-      - name: downloads
-        persistentVolumeClaim:
-          claimName: downloads-smb
       - name: media
         persistentVolumeClaim:
           claimName: media

@@ -78,10 +78,10 @@ data:
           target="${MEDIA_DIR}/${rel}"
           mkdir -p "$(dirname "${target}")"
 
-          # Cross-PV copy then atomic rename on destination side to avoid partial files in Plex paths.
-          cp -f "${file}" "${target}.partial"
+          # Same-filesystem rename (both downloads and media are subPaths of one PVC) via a
+          # temp name + rename to avoid partial files showing up in Plex paths.
+          mv -f "${file}" "${target}.partial"
           mv -f "${target}.partial" "${target}"
-          rm -f "${file}"
 
           date -Iseconds > "${STATE_DIR}/${marker}.clean"
           printf '%s clean -> promoted\n' "${rel}"

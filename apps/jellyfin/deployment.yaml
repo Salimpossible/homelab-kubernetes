@@ -62,7 +62,16 @@ spec:
         - name: jellyfin-cache
           mountPath: /cache
         - name: media
-          mountPath: /media
+          mountPath: /media/movies
+          subPath: movies
+          readOnly: true
+        - name: media
+          mountPath: /media/tv
+          subPath: tv
+          readOnly: true
+        - name: media
+          mountPath: /media/sports
+          subPath: sports
           readOnly: true
         - name: tmp
           mountPath: /tmp

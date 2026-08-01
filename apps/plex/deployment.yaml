@@ -49,7 +49,14 @@ spec:
         - name: plex-config
           mountPath: /config
         - name: media
-          mountPath: /media
+          mountPath: /media/movies
+          subPath: movies
+        - name: media
+          mountPath: /media/tv
+          subPath: tv
+        - name: media
+          mountPath: /media/sports
+          subPath: sports
         resources:
           requests:
             cpu: 250m

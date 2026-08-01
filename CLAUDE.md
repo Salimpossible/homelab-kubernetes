@@ -14,6 +14,7 @@ Deploys a media stack on k3s via Kustomize. This file is the source of truth for
 
 - Keep ingress-nginx as the single public reverse proxy entrypoint.
 - Keep app Services in `media` as `ClusterIP` unless the user explicitly asks for direct exposure.
+  - Exception: `apps/jellyfin/service.yaml` is `NodePort` (`nodePort: 30096`), by explicit user request, so mobile clients (e.g. iOS app) on the LAN can reach it directly at `http://<node-ip>:30096` without needing `home.arpa` DNS resolution — mobile OSes have no hosts-file/local-DNS override, so ingress's Host-header-based routing (`jellyfin.home.arpa`) can't be reached by bare IP alone (confirmed: bare-IP request to ingress returns 404, only a matching `Host` header routes correctly). Plain HTTP, no TLS, on this path.
 - Keep TLS termination at ingress-nginx.
 - Keep the cert-manager-managed wildcard secret pattern (`homelab-wildcard-tls`) unless the user requests a different model.
 - When changing architecture behavior, update this file in the same change.
@@ -46,13 +47,17 @@ For non-HTTP protocols (e.g. BitTorrent peer traffic), ingress-nginx stream mapp
 ## Storage Strategy
 
 - `local-path` = node-local, `ReadWriteOnce` config/state volumes (default StorageClass).
-- `smb-media` = shared SMB-backed volumes, `ReadWriteMany`, `ReclaimPolicy: Retain`.
+- `smb-media` = shared SMB-backed volumes, `ReadWriteMany`, `ReclaimPolicy: Retain`, provisioner `smb.csi.k8s.io`, no `subDir` parameter set — each dynamically-provisioned PVC gets its own opaque top-level folder under the share root (`//192.168.1.21/Public`). Because of that, this StorageClass is deliberately backed by a **single** PVC (see below) rather than one PVC per logical volume — two PVCs on `smb-media` are two unrelated backend folders even though they share a physical server, which breaks same-filesystem renames between them.
 - Stateful app configs use `local-path`: Plex (`plex-config-laptop`), Jellyfin, Radarr, Sonarr, Sportarr, qBittorrent, Prowlarr, Gluetun.
-- Shared library/workspaces use PVCs on `smb-media`: `media` (library) and `downloads-smb` (download workspace).
-- Downloads workflow: qBittorrent writes to `downloads-smb`; Radarr, Sonarr, and Sportarr mount the same workspace for import management; media is then promoted into library paths on `smb-media`.
+- Shared library and downloads workspace: a single PVC, `media`, on `smb-media`. All apps mount it via `subPath`, never full-root except `media-scanner` (undeployed), which would need to see the whole tree in one pod if ever re-enabled. Canonical top-level layout inside the PVC: `downloads/`, `movies/`, `tv/`, `sports/`.
+  - qBittorrent, Radarr, Sonarr, Sportarr mount `subPath: downloads` at `/downloads`.
+  - Radarr/Sonarr/Sportarr additionally mount their own genre folder (`subPath: movies|tv|sports`) at `/movies`, `/tv`, `/sports`.
+  - Plex and Jellyfin mount three separate subPaths (`movies`, `tv`, `sports`) at `/media/movies`, `/media/tv`, `/media/sports` — never `downloads`, so neither can ever index an in-progress download.
+- Downloads workflow: qBittorrent writes into `downloads/`; Radarr/Sonarr/Sportarr each mount the same `downloads/` subPath plus their own genre subPath and handle their own import (their built-in Completed Download Handling moves/renames files from `downloads/` into `movies/`/`tv/`/`sports/`). There is currently no antivirus/scan step in this pipeline — qBittorrent previously had a post-download hook (`qbit-on-complete.sh`) that spawned a Job to clamscan and promote each file via a `cp`+`rm`, but its trigger (`[AutoRun]` in qBittorrent's own config) was `enabled=false` — dead code, never actually invoked — so the hook, its ConfigMap, and its `qbittorrent-job-trigger` ServiceAccount/Role/RoleBinding were removed entirely (2026-08). If scanning is wanted again later, `apps/clamav/` and `apps/media-scanner/` still exist on disk (excluded from root `kustomization.yaml`) as a starting point, but note both were written assuming the old two-PVC layout and would need updating for the single-PVC `subPath` model above.
 - Backup focus: app config PVCs and SMB share data.
 - Scheduling implication: app config `local-path` PVCs are node-coupled; avoid moving those pods across nodes without a migration plan.
-- Known orphaned PVCs still bound in-cluster but unused by any current manifest: `plex-config` (smb-media, superseded by `plex-config-laptop`), `clamav-config`, legacy `downloads` (local-path). Don't build on these; ask before deleting.
+- Known orphaned PVCs still bound in-cluster but unused by any current manifest: `plex-config` (smb-media, superseded by `plex-config-laptop`), `clamav-config`, legacy `downloads` (local-path), and — once the single-PVC migration below is complete and verified — `downloads-smb` (smb-media, superseded by subPaths on `media`). Don't build on these; ask before deleting.
+- Migration note: `downloads-smb` was retired in favor of a `downloads/` subPath on the `media` PVC (2026-08) specifically to fix the copy-not-rename issue above and to standardize subPath scoping across apps. If you still see a live `downloads-smb` PVC/PV, its backend data needs migrating into `media`'s `downloads/` folder before it's safe to delete — see git history for the migration runbook.
 
 ## Secrets
 

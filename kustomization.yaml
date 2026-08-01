@@ -39,8 +39,6 @@ resources:
 - apps/qbittorrent/deployment.yaml
 - apps/qbittorrent/service.yaml
 - apps/qbittorrent/pvc.yaml
-- apps/qbittorrent/configmap.yaml
-- apps/qbittorrent/rbac.yaml
 - apps/qbittorrent/ingress.yaml
 - apps/qbittorrent/networkpolicy.yaml
 

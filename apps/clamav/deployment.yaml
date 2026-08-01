@@ -40,6 +40,7 @@ spec:
           mountPath: /var/lib/clamav
         - name: downloads
           mountPath: /downloads
+          subPath: downloads
           readOnly: true
         resources:
           requests:
@@ -55,4 +56,4 @@ spec:
           claimName: clamav-config
       - name: downloads
         persistentVolumeClaim:
-          claimName: downloads-smb
+          claimName: media

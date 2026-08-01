@@ -4,8 +4,6 @@ kind: Kustomization
 namespace: media
 
 resources:
-  - rbac.yaml
-  - configmap.yaml
   - pvc.yaml
   - deployment.yaml
   - service.yaml
